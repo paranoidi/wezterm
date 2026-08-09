@@ -1697,7 +1697,7 @@ impl TermWindow {
             // highlighting purpose but also manipulates the selection
             // and we want to allow it to retain the selection it made!
 
-            let clear_selection =
+            let intersects_selection =
                 if let Some(selection_range) = self.selection(pane.pane_id()).range.as_ref() {
                     let selection_rows = selection_range.rows();
                     selection_rows.into_iter().any(|row| dirty.contains(row))
@@ -1705,9 +1705,25 @@ impl TermWindow {
                     false
                 };
 
-            if clear_selection {
-                self.selection(pane.pane_id()).range.take();
-                self.selection(pane.pane_id()).origin.take();
+            if intersects_selection {
+                // A row touching the selection can be marked dirty by a
+                // redraw that leaves its text unchanged (a shell
+                // repainting its prompt, a blinking cursor, a spinner).
+                // Only actually clear the selection if the selected text
+                // itself is different, so that a genuine edit under the
+                // selection (eg. #644: editing a line in nano) still
+                // invalidates it.
+                let current_text = self.selection_text(pane);
+                let text_changed = self.selection(pane.pane_id()).last_text.as_deref()
+                    != Some(current_text.as_str());
+
+                if text_changed {
+                    self.selection(pane.pane_id()).range.take();
+                    self.selection(pane.pane_id()).origin.take();
+                    self.selection(pane.pane_id()).last_text.take();
+                } else {
+                    self.selection(pane.pane_id()).last_text = Some(current_text);
+                }
                 self.selection(pane.pane_id()).seqno = pane.get_current_seqno();
             }
         }

@@ -8,7 +8,7 @@ use termwiz::surface::line::DoubleClickRange;
 use termwiz::surface::SequenceNo;
 use wezterm_term::{SemanticZone, StableRowIndex};
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct Selection {
     /// Remembers the starting coordinate of the selection prior to
     /// dragging.
@@ -19,6 +19,11 @@ pub struct Selection {
     pub seqno: SequenceNo,
     /// Whether the selection is rectangular
     pub rectangular: bool,
+    /// The selected text as of the last time the selection was
+    /// (re)established or confirmed unchanged. Used to distinguish a
+    /// harmless redraw from a real edit when deciding whether to
+    /// auto-clear the selection.
+    pub last_text: Option<String>,
 }
 
 pub use config::keyassignment::SelectionMode;
@@ -27,6 +32,7 @@ impl Selection {
     pub fn clear(&mut self) {
         self.range = None;
         self.origin = None;
+        self.last_text = None;
     }
 
     pub fn begin(&mut self, origin: SelectionCoordinate) {

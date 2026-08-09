@@ -237,6 +237,9 @@ impl super::TermWindow {
             self.set_viewport(pane.pane_id(), Some(top + 1), dims);
         }
 
+        let text = self.selection_text(pane);
+        self.selection(pane.pane_id()).last_text = Some(text);
+
         self.window.as_ref().unwrap().invalidate();
     }
 
@@ -278,6 +281,8 @@ impl super::TermWindow {
         }
 
         self.selection(pane.pane_id()).seqno = pane.get_current_seqno();
+        let text = self.selection_text(pane);
+        self.selection(pane.pane_id()).last_text = Some(text);
         self.window.as_ref().unwrap().invalidate();
     }
 }
