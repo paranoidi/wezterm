@@ -710,6 +710,8 @@ pub(crate) async fn hydrate_lines(
                             im.padding_bottom,
                             im.image_id,
                             im.placement_id,
+                            None,
+                            None,
                         )));
                 }
             }

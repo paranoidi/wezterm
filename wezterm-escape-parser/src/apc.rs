@@ -609,6 +609,9 @@ pub struct KittyImagePlacement {
     pub placement_id: Option<u32>,
     /// z=...
     pub z_index: Option<i32>,
+    /// Whether it's a virtual placement used for Unicode placeholders.
+    /// U=0, U=1
+    pub unicode_placeholder: bool,
 }
 
 impl KittyImagePlacement {
@@ -629,6 +632,11 @@ impl KittyImagePlacement {
                 _ => return None,
             },
             z_index: geti(keys, "z"),
+            unicode_placeholder: match get(keys, "U") {
+                None | Some("0") => false,
+                Some("1") => true,
+                _ => return None,
+            },
         })
     }
 
@@ -645,6 +653,10 @@ impl KittyImagePlacement {
 
         if self.do_not_move_cursor {
             keys.insert("C", "1".to_string());
+        }
+
+        if self.unicode_placeholder {
+            keys.insert("U", "1".to_string());
         }
 
         set(keys, "z", &self.z_index);

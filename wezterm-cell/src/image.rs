@@ -16,7 +16,7 @@ use ordered_float::NotNan;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 #[cfg(feature = "std")]
 use wezterm_blob_leases::{BlobLease, BlobManager};
 
@@ -97,6 +97,10 @@ pub struct ImageCell {
 
     image_id: Option<u32>,
     placement_id: Option<u32>,
+
+    /// The corresponding row and column of the attached image.
+    col: Option<u16>,
+    row: Option<u16>,
 }
 
 impl ImageCell {
@@ -105,7 +109,7 @@ impl ImageCell {
         bottom_right: TextureCoordinate,
         data: Arc<ImageData>,
     ) -> Self {
-        Self::with_z_index(top_left, bottom_right, data, 0, 0, 0, 0, 0, None, None)
+        Self::with_z_index(top_left, bottom_right, data, 0, 0, 0, 0, 0, None, None, None, None)
     }
 
     pub fn compute_shape_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -132,6 +136,8 @@ impl ImageCell {
         padding_bottom: u16,
         image_id: Option<u32>,
         placement_id: Option<u32>,
+        col: Option<u16>,
+        row: Option<u16>,
     ) -> Self {
         Self {
             top_left,
@@ -144,6 +150,8 @@ impl ImageCell {
             padding_bottom,
             image_id,
             placement_id,
+            col,
+            row,
         }
     }
 
@@ -173,6 +181,14 @@ impl ImageCell {
 
     pub fn image_data(&self) -> &Arc<ImageData> {
         &self.data
+    }
+
+    pub fn col(&self) -> Option<u16> {
+        self.col
+    }
+
+    pub fn row(&self) -> Option<u16> {
+        self.row
     }
 
     /// negative z_index is rendered beneath the text layer.
@@ -518,6 +534,7 @@ pub enum ImageCellError {
 pub struct ImageData {
     data: Mutex<ImageDataType>,
     hash: [u8; 32],
+    atime: Mutex<SystemTime>,
 }
 
 struct HexSlice<'a>(&'a [u8]);
@@ -557,6 +574,7 @@ impl ImageData {
         Self {
             data: Mutex::new(data),
             hash,
+            atime: Mutex::new(SystemTime::now()),
         }
     }
 
@@ -565,6 +583,7 @@ impl ImageData {
         Self {
             data: Mutex::new(data),
             hash,
+            atime: Mutex::new(SystemTime::now()),
         }
     }
 
@@ -579,10 +598,15 @@ impl ImageData {
     }
 
     pub fn data(&self) -> MutexGuard<'_, ImageDataType> {
+        *self.atime.lock().unwrap() = SystemTime::now();
         self.data.lock().unwrap()
     }
 
     pub fn hash(&self) -> [u8; 32] {
         self.hash
+    }
+
+    pub fn atime(&self) -> SystemTime {
+        self.atime.lock().unwrap().clone()
     }
 }
